@@ -1,0 +1,16 @@
+{
+  "notice": "This is an example template for local database storage. The real database is automatically seeded on first launch into data/sriwedari-db.json, which is gitignored.",
+  "galleries": [],
+  "categories": [],
+  "costumes": [],
+  "orders": [],
+  "events": [],
+  "tickets": [],
+  "users": [],
+  "coupons": [],
+  "auditLogs": [],
+  "reviews": [],
+  "stockMovements": [],
+  "settings": {}
+}
+
