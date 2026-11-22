@@ -1,99 +1,83 @@
-# 🏛️ Galeri Sriwedari - Backend & Database Server
+# 🏛️ Galeri Sriwedari - Backend & Database Server (v2.0)
 
-Repositori ini adalah **server backend mandiri (Dedicated Backend API & Database Service)** untuk ekosistem aplikasi kebudayaan **Galeri Sriwedari**.
-
----
-
-## 🚀 Fitur Backend
-* **RESTful API**: Layanan API lengkap untuk Autentikasi Pengguna, Pemesanan Sewa Busana Adat, Pembelian Tiket Pentas Wayang, Manajemen Inventaris, Moderasi Ulasan, dan Scanner Loket Gerbang.
-* **Database Persisten**: Mengelola database transaksi dan koleksi budaya tersimpan di `data/sriwedari-db.json` (auto-seed saat peluncuran awal).
-* **Ledger Mutasi Stok (*Stock Movements*)**: Audit pencatatan penambahan, penyewaan, pengembalian (QC), dan koreksi stok busana adat.
-* **Otomasi Batas Waktu Reservasi (*Hold Expiry*)**: Pelepasan stok busana secara otomatis jika pesanan sewa tidak dibayar/dikonfirmasi tepat waktu.
-* **Sistem Keamanan**: Enkripsi password menggunakan **PBKDF2 SHA-256 (100.000 iterasi + salt)** dan verifikasi sesi berbasis HMAC.
-* **Unggah Berkas**: Penyimpanan foto arsip budaya & slip bukti transfer via endpoint `/api/upload` hingga 10 MB.
-* **Dukungan CORS Penuh**: Kompatibel dengan frontend Next.js yang berjalan di `http://localhost:3000`.
+Server backend mandiri (Express + TypeScript) dengan arsitektur modular (**Routes &rarr; Middleware &rarr; Controllers &rarr; Lib / DB &rarr; Jobs**) dan dukungan **Dual-Database Store** serta skema relasional **MySQL** (`sql/schema.sql`).
 
 ---
 
 ## 📂 Struktur Direktori
 
-```
+```text
 sriwedari-backend/
+├── scripts/
+│   └── check-db.ts             # Cek kesehatan isi database & ping MySQL
+├── sql/
+│   └── schema.sql              # Skema relasional MySQL (13 tabel berelasi Foreign Key)
 ├── src/
-│   ├── database/
-│   │   ├── server-db.ts       # Service manipulasi database & logika bisnis
-│   │   └── seed-data.ts       # Data awal bawaan sistem
-│   ├── security/
-│   │   └── session.ts         # Enkripsi PBKDF2 & Express RBAC Middleware
-│   ├── routes/
-│   │   └── api.ts             # Seluruh endpoint API terpadu
-│   ├── types.ts               # Skema & kontrak antarmuka TypeScript
-│   └── server.ts              # Entrypoint server Express
-├── data/
-│   ├── sriwedari-db.json      # File database lokal (gitignored)
-│   └── sriwedari-db.example.json # Template contoh
-├── public/
-│   └── uploads/               # Berkas gambar statis
+│   ├── config/
+│   │   ├── cors.ts             # Whitelist CORS (Next.js & Flutter)
+│   │   └── env.ts              # Konfigurasi environment variables
+│   ├── controllers/            # Business logic handlers terpisah per fitur
+│   │   ├── admin.controller.ts
+│   │   ├── auth.controller.ts
+│   │   ├── busana.controller.ts
+│   │   ├── galeri.controller.ts
+│   │   ├── jadwal.controller.ts
+│   │   ├── orders.controller.ts
+│   │   ├── payments.controller.ts
+│   │   ├── reviews.controller.ts
+│   │   ├── tickets.controller.ts
+│   │   ├── upload.controller.ts
+│   │   └── user.controller.ts
+│   ├── db/
+│   │   ├── index.ts            # Database Service (Dual-DB & Bridge Sync)
+│   │   ├── mysql.ts            # Connection Pool MySQL (mysql2/promise)
+│   │   └── seed-data.ts        # Data awal bawaan sistem
+│   ├── jobs/
+│   │   └── orderStatusJob.ts   # Cron job aktif (node-cron) lepas stok order kedaluwarsa
+│   ├── lib/                    # Helper modular
+│   │   ├── crypto.ts           # PBKDF2 SHA-256 & HMAC session token
+│   │   ├── dates.ts            # Format tanggal & holdExpiresAt
+│   │   ├── fileSignature.ts    # Validasi magic bytes gambar
+│   │   ├── payment.ts          # Evaluasi kupon & mapping webhook
+│   │   ├── stock.ts            # Mutasi stok & ledger stock_movements
+│   │   └── upload.ts           # Konfigurasi Multer ke public/uploads
+│   ├── middleware/
+│   │   ├── auth.ts             # Verifikasi Cookie & Bearer Token
+│   │   ├── errorHandler.ts     # Global JSON error & 404 formatter
+│   │   ├── rateLimiter.ts      # Pembatas spam request
+│   │   ├── requestLogger.ts    # Log HTTP request
+│   │   └── requireRole.ts      # Proteksi peran admin/user
+│   ├── routes/                 # Router per domain + index.ts
+│   ├── types/
+│   │   ├── express.d.ts        # Custom Express.Request.user typing
+│   │   └── models.ts           # Interface skema entitas data
+│   ├── app.ts                  # Setup Express app & routing
+│   ├── logger.ts               # Structured console logger
+│   └── server.ts               # Entry point (listen port & start cron job)
+├── tests/
+│   └── api.test.ts             # Automated integration test suite
+├── .env.example
 ├── package.json
-├── tsconfig.json
-└── README.md
+└── tsconfig.json
 ```
 
 ---
 
-## 💻 Cara Menjalankan Server Backend
+## 💻 Menjalankan Backend & Tes
 
-### 1. Masuk ke Folder Proyek
-```bash
-cd sriwedari-backend
-```
-
-### 2. Pasang Dependencies
 ```bash
 npm install
+npm run dev       # Jalankan server di http://localhost:5000
+npm run db:check  # Cek jumlah data & koneksi database
+npm test          # Jalankan automated integration tests
+npm run build     # Kompilasi TypeScript ke dist/
 ```
-
-### 3. Jalankan Server Pengembangan
-```bash
-npm run dev
-```
-
-Server akan aktif di:
-* **Base URL**: `http://localhost:5000`
-* **API Route**: `http://localhost:5000/api`
-* **Health Check**: `http://localhost:5000/health`
 
 ---
 
-## 🔗 Endpoint Utama
+## 🗄️ Menghubungkan ke MySQL (Tanpa Perlu XAMPP Lokal)
 
-| Metode | Endpoint | Deskripsi | Hak Akses |
-| :--- | :--- | :--- | :--- |
-| `POST` | `/api/auth/login` | Masuk akun (User / Admin) | Publik |
-| `POST` | `/api/auth/register` | Pendaftaran pengguna baru | Publik |
-| `GET` | `/api/orders` | Daftar pesanan sewa busana | Pengguna / Admin |
-| `POST` | `/api/orders` | Buat reservasi sewa baru | Pengguna |
-| `PATCH` | `/api/orders` | Verifikasi slip bayar / QC Retur | Admin / Pengguna |
-| `GET` | `/api/tickets` | Data tiket & kursi terisi | Publik / Pengguna |
-| `PATCH` | `/api/tickets` | Validasi tiket loket (Check-In) | Admin |
-| `GET` | `/api/costumes` | Daftar inventaris busana adat | Publik |
-| `GET` | `/api/galleries` | Katalog arsip karya seni budaya | Publik |
-| `GET` | `/api/stock-movements` | Buku besar audit pergerakan stok | Admin |
-| `GET` | `/api/analytics` | Ringkasan metrik dashboard omset | Admin |
-| `POST` | `/api/upload` | Unggah foto lokal (JPG/PNG/WebP) | Terautentikasi |
-
----
-
-## 📤 Cara Push ke Repositori GitHub Baru
-
-Jika Anda ingin membuat repositori baru di GitHub untuk backend ini:
-
-```bash
-git init
-git add .
-git commit -m "feat: initial commit for standalone sriwedari backend & database server"
-git branch -M main
-git remote add origin https://github.com/catherineaviellea422/sriwedari-backend.git
-git push -u origin main
-```
-
+Jika tidak ingin install XAMPP di laptop, Anda bisa memakai **MySQL Cloud Gratis** (seperti Aiven Free MySQL atau TiDB Cloud Serverless), lalu:
+1. Salin `.env.example` menjadi `.env`.
+2. Ubah `DB_DRIVER=mysql` dan isi `DATABASE_URL="mysql://user:pass@host:port/sriwedari_db"`.
+3. Buka **Extension MySQL** di IDE Anda dan jalankan file [`sql/schema.sql`](./sql/schema.sql) (atau biarkan server otomatis menjalankannya saat startup).

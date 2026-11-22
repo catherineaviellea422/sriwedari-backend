@@ -1,4 +1,4 @@
-import { GalleryItem, CategoryItem, CostumeItem, OrderItem, EventItem, TicketItem, UserItem, CouponItem, AuditLogItem, ReviewItem, SettingsItem } from '../types';
+import { GalleryItem, CategoryItem, CostumeItem, OrderItem, EventItem, TicketItem, UserItem, CouponItem, AuditLogItem, ReviewItem, SettingsItem } from '../types/models';
 
 export const INITIAL_GALLERIES: GalleryItem[] = [
   {

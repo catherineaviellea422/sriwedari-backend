@@ -1,83 +1,31 @@
-import express from 'express';
-import cors from 'cors';
-import cookieParser from 'cookie-parser';
-import path from 'path';
-import dotenv from 'dotenv';
-import { apiRouter } from './routes/api';
+import { app } from './app';
+import { env } from './config/env';
+import { ServerDB } from './db';
+import { startOrderStatusJob } from './jobs/orderStatusJob';
+import { logger } from './logger';
 
-dotenv.config();
+async function bootstrap() {
+  await ServerDB.connectAndVerify();
+  startOrderStatusJob();
 
-const app = express();
-const PORT = process.env.PORT || 5000;
-const CORS_ORIGIN = process.env.CORS_ORIGIN || 'http://localhost:3000';
-
-// ==========================================
-// MIDDLEWARES
-// ==========================================
-app.use(
-  cors({
-    origin: (origin, callback) => {
-      // Allow requests with no origin (like mobile apps, curl, postman) or matching origin
-      if (!origin || origin === CORS_ORIGIN || origin.includes('localhost') || origin.includes('127.0.0.1')) {
-        callback(null, true);
-      } else {
-        callback(null, true); // Dev permissive
-      }
-    },
-    credentials: true,
-  })
-);
-
-app.use(cookieParser());
-app.use(express.json({ limit: '10mb' }));
-app.use(express.urlencoded({ extended: true, limit: '10mb' }));
-
-// Static file serving for uploads (/uploads/...)
-const uploadsDir = path.join(process.cwd(), 'public', 'uploads');
-app.use('/uploads', express.static(uploadsDir));
-
-// ==========================================
-// HEALTH CHECK & ROOT
-// ==========================================
-app.get('/', (_req, res) => {
-  res.json({
-    status: 'online',
-    service: 'Galeri Sriwedari Backend & Database API Server',
-    version: '1.0.0',
-    port: PORT,
-    endpoints: '/api/*',
-    timestamp: new Date().toISOString(),
+  app.listen(env.PORT, () => {
+    logger.info(`Galeri Sriwedari Backend berjalan di http://localhost:${env.PORT}`);
+    console.log(`
+  ================================================================
+  🏛️  GALERI SRIWEDARI - BACKEND & DATABASE API SERVER (v2.0)
+  ================================================================
+  ✓ Server berjalan di : http://localhost:${env.PORT}
+  ✓ User API           : http://localhost:${env.PORT}/api/user/*
+  ✓ Admin API          : http://localhost:${env.PORT}/api/admin/*
+  ✓ DB Driver          : ${env.DB_DRIVER.toUpperCase()}
+  ✓ Static Uploads     : http://localhost:${env.PORT}/uploads
+  ✓ CORS Origin        : ${env.CORS_ORIGIN}
+  ================================================================
+    `);
   });
+}
+
+bootstrap().catch((err) => {
+  logger.error('Fatal error saat memulai server', err);
+  process.exit(1);
 });
-
-app.get('/health', (_req, res) => {
-  res.json({
-    status: 'healthy',
-    uptime: process.uptime(),
-    timestamp: new Date().toISOString(),
-  });
-});
-
-// ==========================================
-// API ROUTES MOUNT
-// ==========================================
-app.use('/api', apiRouter);
-
-// ==========================================
-// START SERVER
-// ==========================================
-app.listen(PORT, () => {
-  console.log(`
-  ======================================================
-  🏛️  GALERI SRIWEDARI - BACKEND & DATABASE SERVER
-  ======================================================
-  ✓ Server berjalan di : http://localhost:${PORT}
-  ✓ API Endpoints     : http://localhost:${PORT}/api
-  ✓ Static Uploads    : http://localhost:${PORT}/uploads
-  ✓ CORS Origin       : ${CORS_ORIGIN}
-  ======================================================
-  `);
-});
-
-export default app;
-

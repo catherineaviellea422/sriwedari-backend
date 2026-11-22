@@ -1,19 +1,23 @@
 {
   "name": "sriwedari-backend",
-  "version": "1.0.0",
-  "description": "Galeri Sriwedari - Dedicated Backend & Database API Server",
+  "version": "2.0.0",
+  "description": "Galeri Sriwedari - Modular Express Backend & Database API Server",
   "main": "dist/server.js",
   "scripts": {
     "dev": "tsx watch src/server.ts",
     "build": "tsc",
-    "start": "node dist/server.js"
+    "start": "node dist/server.js",
+    "test": "tsx --test tests/api.test.ts",
+    "db:check": "tsx scripts/check-db.ts"
   },
   "dependencies": {
     "cookie-parser": "^1.4.6",
     "cors": "^2.8.5",
     "dotenv": "^16.4.5",
     "express": "^4.19.2",
-    "multer": "^1.4.5-lts.1"
+    "multer": "^1.4.5-lts.1",
+    "mysql2": "^3.24.6",
+    "node-cron": "^4.6.0"
   },
   "devDependencies": {
     "@types/cookie-parser": "^1.4.7",
@@ -21,8 +25,8 @@
     "@types/express": "^4.17.21",
     "@types/multer": "^1.4.12",
     "@types/node": "^20.17.0",
+    "@types/node-cron": "^3.0.11",
     "tsx": "^4.19.2",
     "typescript": "^5.6.3"
   }
 }
-

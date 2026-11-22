@@ -1,5 +1,13 @@
 export type Role = 'admin' | 'user';
 
+export interface SessionPayload {
+  id: string;
+  name: string;
+  email: string;
+  role: Role;
+  expiresAt: number;
+}
+
 export interface UserItem {
   id: string;
   name: string;
@@ -63,6 +71,7 @@ export interface OrderCostumeSelection {
 
 export interface OrderItem {
   id: string;
+  userId?: string;
   userName: string;
   userPhone: string;
   userEmail: string;
@@ -108,6 +117,7 @@ export interface EventItem {
 
 export interface TicketItem {
   id: string;
+  userId?: string;
   eventId: string;
   eventTitle: string;
   userName: string;
@@ -137,7 +147,15 @@ export interface CouponItem {
 export interface AuditLogItem {
   id: string;
   timestamp: string;
-  action: 'VERIFY_PAYMENT' | 'QC_RETURN' | 'GATE_CHECKIN' | 'CREATE_ORDER' | 'BOOK_TICKET' | 'DELETE_USER' | 'UPDATE_SETTINGS' | 'RESET_DB';
+  action:
+    | 'VERIFY_PAYMENT'
+    | 'QC_RETURN'
+    | 'GATE_CHECKIN'
+    | 'CREATE_ORDER'
+    | 'BOOK_TICKET'
+    | 'DELETE_USER'
+    | 'UPDATE_SETTINGS'
+    | 'RESET_DB';
   actorName: string;
   actorRole: string;
   details: string;
@@ -185,4 +203,71 @@ export interface StockMovementItem {
   actorName: string;
   orderId?: string;
   createdAt: string;
+}
+
+export interface WishlistItem {
+  id: string;
+  userId: string;
+  targetId: string;
+  targetType: 'gallery' | 'costume';
+  createdAt: string;
+}
+
+export interface UserLikeItem {
+  userId: string;
+  galleryId: string;
+  createdAt: string;
+}
+
+export interface PasswordResetRequest {
+  id: string;
+  identifier: string;
+  userId: string;
+  role: Role;
+  code: string;
+  expiresAt: string;
+  used: boolean;
+}
+
+export interface AnalyticsSnapshotItem {
+  date: string;
+  visitors: number;
+  revenue: number;
+  ordersCount: number;
+  ticketsCount: number;
+}
+
+export interface UserDBState {
+  schemaVersion: number;
+  userAccounts: UserItem[];
+  wishlists: WishlistItem[];
+  userLikes: UserLikeItem[];
+  userOrders: OrderItem[];
+  userTickets: TicketItem[];
+  publicGalleries: GalleryItem[];
+  publicCategories: CategoryItem[];
+  publicCostumes: CostumeItem[];
+  publicEvents: EventItem[];
+  publicReviews: ReviewItem[];
+  publicSettings: SettingsItem;
+  activeCoupons: CouponItem[];
+  passwordResets: PasswordResetRequest[];
+}
+
+export interface AdminDBState {
+  schemaVersion: number;
+  adminAccounts: UserItem[];
+  managedUsers: UserItem[];
+  masterGalleries: GalleryItem[];
+  masterCategories: CategoryItem[];
+  masterCostumes: CostumeItem[];
+  stockMovements: StockMovementItem[];
+  masterOrders: OrderItem[];
+  masterEvents: EventItem[];
+  masterTickets: TicketItem[];
+  masterCoupons: CouponItem[];
+  moderationReviews: ReviewItem[];
+  auditLogs: AuditLogItem[];
+  systemSettings: SettingsItem;
+  analyticsSnapshots: AnalyticsSnapshotItem[];
 }
