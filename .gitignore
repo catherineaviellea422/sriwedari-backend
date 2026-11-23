@@ -22,6 +22,10 @@ yarn-error.log*
 data/*.json
 !data/*.example.json
 
+# Uploaded user media
+public/uploads/*
+!public/uploads/.gitkeep
+
 # OS files
 .DS_Store
 Thumbs.db
