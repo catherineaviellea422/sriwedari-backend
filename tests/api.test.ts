@@ -8,7 +8,7 @@ let server: http.Server;
 let baseUrl: string;
 
 test.before(async () => {
-  ServerDB.initialize();
+  await ServerDB.connectAndVerify();
   await new Promise<void>((resolve) => {
     server = app.listen(0, () => {
       const addr = server.address();
@@ -21,6 +21,7 @@ test.before(async () => {
 });
 
 test.after(async () => {
+  await ServerDB.close();
   await new Promise<void>((resolve) => server.close(() => resolve()));
 });
 

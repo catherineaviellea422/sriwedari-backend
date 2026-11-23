@@ -1,9 +1,10 @@
+import { RowDataPacket } from 'mysql2/promise';
 import { ServerDB } from '../src/db';
 import { env } from '../src/config/env';
-import { testMysqlConnection } from '../src/db/mysql';
+import { getMysqlPool } from '../src/db/mysql';
 
 async function main() {
-  ServerDB.initialize();
+  await ServerDB.connectAndVerify();
   const state = ServerDB.getFullState();
 
   console.log('=== CHECK DATABASE GALERI SRIWEDARI ===');
@@ -16,9 +17,11 @@ async function main() {
   console.log('Tickets       :', state.tickets.length);
 
   if (env.DB_DRIVER === 'mysql') {
-    const ok = await testMysqlConnection();
-    console.log('MySQL Ping    :', ok ? 'TERHUBUNG' : 'GAGAL');
+    const [tables] = await getMysqlPool().query<RowDataPacket[]>('SHOW TABLES');
+    console.log('MySQL Tables  :', tables.length, `(${env.DB_NAME})`);
   }
+
+  await ServerDB.close();
 }
 
 main().catch((err) => {

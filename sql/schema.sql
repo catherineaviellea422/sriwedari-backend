@@ -83,7 +83,7 @@ CREATE TABLE IF NOT EXISTS orders (
   user_name VARCHAR(150) NOT NULL,
   user_phone VARCHAR(40) NOT NULL,
   user_email VARCHAR(191) NOT NULL,
-  costume_id VARCHAR(64) NOT NULL,
+  costume_id VARCHAR(64) NULL,
   costume_name VARCHAR(180) NOT NULL,
   costumes_json JSON NULL,
   start_date VARCHAR(32) NOT NULL,
@@ -104,7 +104,7 @@ CREATE TABLE IF NOT EXISTS orders (
   cancel_reason TEXT NULL,
   created_at VARCHAR(32) NOT NULL,
   CONSTRAINT fk_orders_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL,
-  CONSTRAINT fk_orders_costume FOREIGN KEY (costume_id) REFERENCES costumes(id) ON DELETE RESTRICT
+  CONSTRAINT fk_orders_costume FOREIGN KEY (costume_id) REFERENCES costumes(id) ON DELETE SET NULL
 );
 
 CREATE TABLE IF NOT EXISTS tickets (

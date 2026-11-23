@@ -39,7 +39,13 @@ import { computeHoldExpiresAt, formatShortTimestamp, formatTimestamp, isExpiredI
 import { evaluateCouponDiscount } from '../lib/payment';
 import { logger } from '../logger';
 import { env } from '../config/env';
-import { ensureMysqlSchema, testMysqlConnection } from './mysql';
+import {
+  closeMysqlPool,
+  ensureMysqlDatabaseAndSchema,
+  hasMysqlData,
+  loadAllFromMysql,
+  queueMysqlSync,
+} from './mysql';
 
 export interface ServerDBState {
   galleries: GalleryItem[];
@@ -256,19 +262,62 @@ export class DatabaseBridgeService {
 
 class ServerDatabaseService {
   private initialized = false;
+  private isHydrating = false;
 
   async connectAndVerify(): Promise<void> {
     this.initialize();
     if (env.DB_DRIVER === 'mysql') {
-      const connected = await testMysqlConnection();
-      if (connected) {
-        await ensureMysqlSchema();
+      const ready = await ensureMysqlDatabaseAndSchema();
+      if (ready) {
+        const populated = await hasMysqlData();
+        if (!populated) {
+          logger.info('Database MySQL masih kosong — melakukan seeding otomatis ke 13 tabel...');
+          await queueMysqlSync(this.loadAdminDBRaw(), this.loadUserDB());
+          logger.info('Seeding awal ke MySQL sriwedari_db selesai!');
+        } else {
+          this.isHydrating = true;
+          try {
+            const remote = await loadAllFromMysql();
+            const adminDb = this.loadAdminDBRaw();
+            const userDb = this.loadUserDB();
+
+            adminDb.adminAccounts = remote.users.filter((u) => u.role === 'admin');
+            userDb.userAccounts = remote.users.filter((u) => u.role === 'user');
+            DatabaseBridgeService.syncUsersToAdminDirectory(userDb, adminDb);
+
+            adminDb.masterCategories = remote.categories;
+            adminDb.masterCostumes = remote.costumes;
+            adminDb.masterGalleries = remote.galleries;
+            adminDb.masterEvents = remote.events;
+            adminDb.masterOrders = remote.orders;
+            userDb.userOrders = clone(remote.orders);
+            adminDb.masterTickets = remote.tickets;
+            userDb.userTickets = clone(remote.tickets);
+            adminDb.stockMovements = remote.stockMovements;
+            adminDb.masterCoupons = remote.coupons;
+            adminDb.moderationReviews = remote.reviews;
+            userDb.wishlists = remote.wishlists;
+            adminDb.auditLogs = remote.auditLogs;
+            if (remote.settings) adminDb.systemSettings = remote.settings;
+
+            DatabaseBridgeService.syncCatalogToUserDb(adminDb, userDb);
+            atomicWriteJson(ADMIN_DB_FILE, adminDb);
+            atomicWriteJson(USER_DB_FILE, userDb);
+            logger.info('Data berhasil dimuat dari MySQL sriwedari_db.');
+          } finally {
+            this.isHydrating = false;
+          }
+        }
       } else {
         logger.warn('MySQL belum aktif. Tetap melayani dengan penyimpanan lokal Dual-JSON agar server tidak error.');
       }
     } else {
       logger.info('Database Driver: Dual-JSON Store (sriwedari-user-db.json & sriwedari-admin-db.json)');
     }
+  }
+
+  async close(): Promise<void> {
+    await closeMysqlPool();
   }
 
   initialize(): void {
@@ -382,6 +431,9 @@ class ServerDatabaseService {
   saveUserDB(data: UserDBState): void {
     try {
       atomicWriteJson(USER_DB_FILE, data);
+      if (!this.isHydrating && env.DB_DRIVER === 'mysql') {
+        void queueMysqlSync(this.loadAdminDBRaw(), data);
+      }
     } catch (err) {
       logger.error('Error saving user DB', err);
     }
@@ -414,6 +466,9 @@ class ServerDatabaseService {
   saveAdminDB(data: AdminDBState): void {
     try {
       atomicWriteJson(ADMIN_DB_FILE, data);
+      if (!this.isHydrating && env.DB_DRIVER === 'mysql') {
+        void queueMysqlSync(data, this.loadUserDB());
+      }
     } catch (err) {
       logger.error('Error saving admin DB', err);
     }
